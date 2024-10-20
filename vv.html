@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document to QR Code Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            background: #f7f7f7;
+        }
+
+        #dropZone {
+            width: 80%;
+            height: 200px;
+            border: 2px dashed #42a5f5;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #999;
+            font-size: 1.2rem;
+            padding: 20px;
+            margin: 20px auto;
+            transition: border-color 0.3s ease;
+        }
+
+        #dropZone.hover {
+            border-color: #1e88e5;
+        }
+
+        #qrCode {
+            margin-top: 30px;
+        }
+
+        #qrCode canvas {
+            box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .alert {
+            margin-top: 20px;
+            color: red;
+            font-weight: bold;
+        }
+
+        h1 {
+            font-size: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Drag and Drop Document to Generate QR Code</h1>
+
+    <div id="dropZone">Drag and drop your document here (supports .txt, .doc, and .docx)</div>
+    <div id="qrCode"></div>
+
+    <!-- jQuery, QR Code Generator, and Mammoth.js for Word document parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.qrcode/1.0/jquery.qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const dropZone = document.getElementById('dropZone');
+            const qrCodeDiv = document.getElementById('qrCode');
+
+            // Highlight drop area when item is dragged over it
+            dropZone.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                dropZone.classList.add('hover');
+            });
+
+            // Remove highlight when dragging leaves drop area
+            dropZone.addEventListener('dragleave', (event) => {
+                dropZone.classList.remove('hover');
+            });
+
+            // Handle the dropped file
+            dropZone.addEventListener('drop', (event) => {
+                event.preventDefault();
+                dropZone.classList.remove('hover');
+                
+                const file = event.dataTransfer.files[0];
+                if (file) {
+                    const fileType = file.type;
+
+                    // Clear previous QR code
+                    qrCodeDiv.innerHTML = '';  // Clear previous QR code
+
+                    // Handle text files
+                    if (fileType === "text/plain") {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            const documentText = e.target.result;
+                            generateQRCode(documentText);  // Generate QR code with document text
+                        };
+                        reader.readAsText(file);
+                    } 
+                    // Handle Word files (.docx)
+                    else if (fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || file.name.endsWith('.doc')) {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            const arrayBuffer = reader.result;
+                            // Use Mammoth.js to extract plain text from the Word document
+                            mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                                .then(function (result) {
+                                    const documentText = result.value;
+                                    generateQRCode(documentText);  // Generate QR code with extracted text
+                                })
+                                .catch(function (err) {
+                                    alert("Error reading the Word document.");
+                                });
+                        };
+                        reader.readAsArrayBuffer(file);
+                    } 
+                    else {
+                        alert("Please drop a valid text or Word document (.txt, .doc, or .docx).");
+                    }
+                }
+            });
+
+            // Function to generate QR Code
+            function generateQRCode(text) {
+                $(qrCodeDiv).qrcode({
+                    text: text,
+                    width: 120,    // Set QR code width (smaller size)
+                    height: 120,   // Set QR code height (smaller size)
+                    correctLevel: 0, // Error correction level (L: 0, M: 1, Q: 2, H: 3)
+                    background: "#ffffff", // Background color
+                    foreground: "#009688"  // Foreground color (QR code color)
+                });
+            }
+        });
+    </script>
+</body>
+</html>
